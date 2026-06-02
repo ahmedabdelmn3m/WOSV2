@@ -60,7 +60,6 @@ function effectiveDmg(raw: number, defense: number): number {
 }
 
 // Infantry beats Lancer | Lancer beats Marksman | Marksman beats Infantry
-// FIX 1: Added 'as const' to freeze the exact literal types
 const TYPE_ADV: Record<TroopKey, TroopKey> = {
   infantry: 'lancer',
   lancer: 'marksman',
@@ -204,7 +203,6 @@ function reverseOptimize(user: ArmyStats, enemy: ArmyStats, targets = [75, 85, 9
           boost += step
           const test: ArmyStats = JSON.parse(JSON.stringify(user))
           
-          // FIX 2: Explicitly typing the key to prevent the generic Record error
           ;test[t][key as keyof TroopStats] += boost
           
           if (simulateBattle(test, enemy).winProbability >= pct) reached = true
@@ -259,9 +257,10 @@ const TROOPS: { key: TroopKey; label: string; color: string }[] = [
   { key: 'marksman', label: 'Marksman', color: '#f0b840' },
 ]
 
+// FIXED: Strict types added to onChange signature to eliminate down-stream errors
 function StatEditor({ stats, onChange }: {
   stats: ArmyStats
-  onChange: (t: TroopKey, k: string, v: number) => void
+  onChange: (t: TroopKey, k: keyof TroopStats, v: number) => void
 }) {
   return (
     <div>
@@ -274,8 +273,9 @@ function StatEditor({ stats, onChange }: {
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 }}>{f.label}</div>
                 <input
                   type="number"
-                  value={(stats[t.key] as Record<string, number>)[f.key]}
-                  onChange={e => onChange(t.key, f.key, Number(e.target.value))}
+                  // FIXED: Line 277 fix -> Cast the key as valid keyof TroopStats instead of casting the whole object
+                  value={stats[t.key][f.key as keyof TroopStats]}
+                  onChange={e => onChange(t.key, f.key as keyof TroopStats, Number(e.target.value))}
                   style={{ width: '100%', background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: 13, padding: '6px 8px', borderRadius: 5, outline: 'none' }}
                 />
               </div>
@@ -321,14 +321,16 @@ export default function Home() {
 
   const active = presets.find(p => p.id === activeId) ?? presets[0]
 
-  function updateUser(troop: TroopKey, key: string, val: number) {
+  // FIXED: Strictly typed the "key" parameter to prevent index spread errors
+  function updateUser(troop: TroopKey, key: keyof TroopStats, val: number) {
     setPresets(ps => ps.map(p => p.id !== activeId ? p : {
       ...p, stats: { ...p.stats, [troop]: { ...p.stats[troop], [key]: val } }
     }))
     setResult(null); setOptimizer(null)
   }
 
-  function updateEnemy(troop: TroopKey, key: string, val: number) {
+  // FIXED: Strictly typed the "key" parameter to prevent index spread errors
+  function updateEnemy(troop: TroopKey, key: keyof TroopStats, val: number) {
     setEnemyStats(s => ({ ...s, [troop]: { ...s[troop], [key]: val } }))
     setResult(null); setOptimizer(null)
   }
