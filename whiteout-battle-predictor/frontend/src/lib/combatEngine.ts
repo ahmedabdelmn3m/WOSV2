@@ -4,6 +4,8 @@
  * Mirrors backend engine exactly — same formulas.
  */
 
+export type TroopType = "infantry" | "lancer" | "marksman";
+
 export interface TroopStats {
   atk: number;
   atkPct: number;
@@ -67,11 +69,14 @@ function effectiveDamage(raw: number, defense: number): number {
 
 // ── TYPE ADVANTAGE ────────────────────────────────────────────────────────────
 
-const TYPE_ADVANTAGE: Record<string, string> = {
+// ROOT-CAUSE FIX: Typed keys/values strictly and frozen with 'as const' 
+// so TypeScript knows exactly what troop type is returned.
+const TYPE_ADVANTAGE: Record<TroopType, TroopType> = {
   infantry: "lancer",
   lancer: "marksman",
   marksman: "infantry",
-};
+} as const;
+
 const ADV_BONUS = 0.15;
 
 // ── BATTLE SIMULATOR ─────────────────────────────────────────────────────────
@@ -84,13 +89,15 @@ export function simulateBattle(user: ArmyStats, enemy: ArmyStats, maxRounds = 20
   const getDef = (army: ArmyStats, t: keyof ArmyStats) =>
     calcDefense(army[t].def, army[t].defPct, army[t].hp, army[t].hpPct);
 
-  const userDmg = Object.fromEntries(troops.map(t => [t, getDmg(user, t)]));
-  const enemyDmg = Object.fromEntries(troops.map(t => [t, getDmg(enemy, t)]));
-  const userDef = Object.fromEntries(troops.map(t => [t, getDef(user, t)]));
-  const enemyDef = Object.fromEntries(troops.map(t => [t, getDef(enemy, t)]));
+  // FIXED: Explicitly casting Object.fromEntries to use TroopType keys
+  const userDmg = Object.fromEntries(troops.map(t => [t, getDmg(user, t)])) as Record<TroopType, number>;
+  const enemyDmg = Object.fromEntries(troops.map(t => [t, getDmg(enemy, t)])) as Record<TroopType, number>;
+  const userDef = Object.fromEntries(troops.map(t => [t, getDef(user, t)])) as Record<TroopType, number>;
+  const enemyDef = Object.fromEntries(troops.map(t => [t, getDef(enemy, t)])) as Record<TroopType, number>;
 
-  const userHP: Record<string, number> = { infantry: 100, lancer: 100, marksman: 100 };
-  const enemyHP: Record<string, number> = { infantry: 100, lancer: 100, marksman: 100 };
+  // FIXED: Changed Record key from generic 'string' to strict 'TroopType'
+  const userHP: Record<TroopType, number> = { infantry: 100, lancer: 100, marksman: 100 };
+  const enemyHP: Record<TroopType, number> = { infantry: 100, lancer: 100, marksman: 100 };
 
   let round = 0;
   while (round < maxRounds) {
@@ -138,7 +145,7 @@ export function simulateBattle(user: ArmyStats, enemy: ArmyStats, maxRounds = 20
     { base: "hp",  pct: "hpPct",  label: "HP" },
     { base: "leth",pct: "lethPct",label: "LETH" },
   ];
-  const troopLabels: Record<string, string> = { infantry: "Infantry", lancer: "Lancer", marksman: "Marksman" };
+  const troopLabels: Record<TroopType, string> = { infantry: "Infantry", lancer: "Lancer", marksman: "Marksman" };
 
   let biggestAdv = "", advDiff = -Infinity;
   let biggestWeak = "", weakDiff = Infinity;
@@ -157,7 +164,7 @@ export function simulateBattle(user: ArmyStats, enemy: ArmyStats, maxRounds = 20
   const totalScore = troops.reduce((a, t) => a + userDmg[t] + userDef[t], 0) || 1;
   const formation = Object.fromEntries(
     troops.map(t => [t, Math.round((userDmg[t] + userDef[t]) / totalScore * 100)])
-  );
+  ) as Record<TroopType, number>;
   const remainder = 100 - Object.values(formation).reduce((a, b) => a + b, 0);
   formation.marksman += remainder;
 
@@ -202,7 +209,7 @@ export function reverseOptimize(
       { key: "defPct", step: 5, label: "Defense%" },
       { key: "hpPct", step: 5, label: "Health%" },
     ];
-    const troopLabels: Record<string, string> = { infantry: "Infantry", lancer: "Lancer", marksman: "Marksman" };
+    const troopLabels: Record<TroopType, string> = { infantry: "Infantry", lancer: "Lancer", marksman: "Marksman" };
 
     const upgrades: OptimizerUpgrade[] = [];
 
