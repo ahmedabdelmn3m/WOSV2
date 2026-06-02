@@ -201,7 +201,7 @@ function reverseOptimize(user: ArmyStats, enemy: ArmyStats, targets = [75, 85, 9
         while (boost < 10000 && !reached) {
           boost += step
           const test: ArmyStats = JSON.parse(JSON.stringify(user))
-          ;(test[t] as Record<string, number>)[key] += boost
+          ;(test[t] as unknown as Record<string, number>)[key] += boost
           if (simulateBattle(test, enemy).winProbability >= pct) reached = true
         }
         if (reached) upgrades.push({
@@ -269,7 +269,7 @@ function StatEditor({ stats, onChange }: {
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 }}>{f.label}</div>
                 <input
                   type="number"
-                  value={(stats[t.key] as Record<string, number>)[f.key]}
+                  value={(stats[t.key] as unknown as Record<string, number>)[f.key]}
                   onChange={e => onChange(t.key, f.key, Number(e.target.value))}
                   style={{ width: '100%', background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: 13, padding: '6px 8px', borderRadius: 5, outline: 'none' }}
                 />
