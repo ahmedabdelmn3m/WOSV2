@@ -9,7 +9,7 @@ type TroopKey = 'infantry' | 'lancer' | 'marksman'
 interface TroopStats {
   atk: number; atkPct: number
   def: number; defPct: number
-  hp: number;  hpPct: number
+  hp: number; hpPct: number
   leth: number; lethPct: number
 }
 
@@ -60,14 +60,16 @@ function effectiveDmg(raw: number, defense: number): number {
 }
 
 // Infantry beats Lancer | Lancer beats Marksman | Marksman beats Infantry
+// FIX 1: Added 'as const' to freeze the exact literal types
 const TYPE_ADV: Record<TroopKey, TroopKey> = {
   infantry: 'lancer',
   lancer: 'marksman',
   marksman: 'infantry',
-}
+} as const; 
 
 const TROOP_KEYS: TroopKey[] = ['infantry', 'lancer', 'marksman']
 
+// Safe target picker that bypasses strict Array.includes type errors
 function pickTarget(preferred: TroopKey, alive: TroopKey[]): TroopKey {
   return alive.indexOf(preferred) !== -1 ? preferred : alive[0]
 }
@@ -201,7 +203,10 @@ function reverseOptimize(user: ArmyStats, enemy: ArmyStats, targets = [75, 85, 9
         while (boost < 10000 && !reached) {
           boost += step
           const test: ArmyStats = JSON.parse(JSON.stringify(user))
-          ;(test[t] as unknown as Record<string, number>)[key] += boost
+          
+          // FIX 2: Explicitly typing the key to prevent the generic Record error
+          ;test[t][key as keyof TroopStats] += boost
+          
           if (simulateBattle(test, enemy).winProbability >= pct) reached = true
         }
         if (reached) upgrades.push({
@@ -269,7 +274,7 @@ function StatEditor({ stats, onChange }: {
                 <div style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 3 }}>{f.label}</div>
                 <input
                   type="number"
-                  value={(stats[t.key] as unknown as Record<string, number>)[f.key]}
+                  value={(stats[t.key] as Record<string, number>)[f.key]}
                   onChange={e => onChange(t.key, f.key, Number(e.target.value))}
                   style={{ width: '100%', background: 'var(--bg-deep)', border: '1px solid var(--border)', color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: 13, padding: '6px 8px', borderRadius: 5, outline: 'none' }}
                 />
